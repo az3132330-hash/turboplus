@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Horror Hunter (Endless Boss)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      color: #fff;
+    }
+
+    #container {
+      text-align: center;
+      width: 100%;
+      max-width: 900px;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+
+    canvas {
+      background: #000;
+      border: 3px solid #880000;
+      display: block;
+      margin: 0 auto 10px;
+      box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
+      width: 100%;      /* responsive width */
+      height: auto;     /* keep aspect ratio (wide) */
+      touch-action: none;
+    }
+
+    #title {
+      font-size: 20px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    #modes, #difficulty {
+      margin-top: 8px;
+      margin-bottom: 6px;
+    }
+
+    #modes button,
+    #difficulty button {
+      margin: 0 4px;
+      padding: 4px 10px;
+      border: 1px solid #fff;
+      background: #333;
+      cursor: pointer;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    #modes button.active,
+    #difficulty button.active {
+      background: #ff0000;
+      color: #fff;
+    }
+
+    #info {
+      font-size: 13px;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    #tagline {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #ffcc66;
+    }
+
+    /* ---- MOBILE CONTROLS (JOYSTICK + FIRE) ---- */
+    #mobileControls {
+      margin-top: 4px;
+    }
+
+    #rotateHint {
+      font-size: 11px;
+      color: #ffeb3b;
+      margin-bottom: 4px;
+      display: none; /* portrait pe show hoga */
+    }
+
+    #mobileBar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #joystickArea {
+      touch-action: none;
+    }
+
+    #joystickBase {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid #888;
+      background: #111;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    #joystickKnob {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #555;
+      border: 2px solid #aaa;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      transition: transform 0.06s linear;
+    }
+
+    .touch-btn {
+      border-radius: 8px;
+      border: 1px solid #fff;
+      background: #222;
+      color: #fff;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    /* Red square FIRE button */
+    #btnFire {
+      background: #b00000;
+      border-color: #ff4444;
+      width: 68px;
+      height: 68px;
+      padding: 0;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #btnFire:hover {
+      background: #ff2222;
+    }
+
+    #btnRestart {
+      margin-top: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #touchHint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #cccccc;
+    }
+
+    /* How to play */
+    #howToBtn {
+      margin-top: 8px;
+      padding: 6px 12px;
+      background: #0d8a34;
+      border-radius: 6px;
+      border: 1px solid #2cff7b;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    #howToBox {
+      margin-top: 6px;
+      padding: 8px 10px;
+      background: #002610;
+      border-radius: 6px;
+      border: 1px solid #1fa84f;
+      font-size: 12px;
+      text-align: left;
+      display: none;
+    }
+
+    #howToBox ul {
+      padding-left: 18px;
+      margin: 4px 0;
+    }
+
+    #howToBox li {
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 600px) {
+      #title {
+        font-size: 18px;
+      }
+      #info {
+        font-size: 12px;
+      }
+      #joystickBase {
+        width: 70px;
+        height: 70px;
+      }
+      #btnFire {
+        width: 60px;
+        height: 60px;
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: portrait) {
+      #rotateHint {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="title">HORROR HUNTER</div>
+
+    <canvas id="game" width="800" height="300"></canvas>
+
+    <!-- MOBILE / TOUCH CONTROLS: directly under game -->
+    <div id="mobileControls">
+      <div id="rotateHint">For best experience, rotate your phone sideways (landscape).</div>
+      <div id="mobileBar">
+        <div id="joystickArea">
+          <div id="joystickBase">
+            <div id="joystickKnob"></div>
+          </div>
+        </div>
+        <button id="btnFire" class="touch-btn">FIRE</button>
+      </div>
+      <button id="btnRestart">RESTART</button>
+      <div id="touchHint">(Mobile: drag joystick up/down, tap FIRE to shoot)</div>
+    </div>
+
+    <!-- Mode & Difficulty under controls -->
+    <div id="modes">
+      Mode:
+      <button id="modeNoBossBtn" class="active">Endless (No Boss)</button>
+      <button id="modeBossBtn">Endless Boss Hunt</button>
+    </div>
+
+    <div id="difficulty">
+      Difficulty:
+      <button id="easyBtn">Easy</button>
+      <button id="normalBtn" class="active">Normal</button>
+      <button id="hardBtn">Hard</button>
+    </div>
+
+    <div id="info">
+      PC: <b>↑ / ↓</b> move, <b>SPACE / F</b> fire, <b>R</b> restart<br>
+      Mobile: joystick se move, FIRE button se shoot 👇<br>
+      Top bird = "Fish" (white) +1, Middle = "Elephant" (green) +1, Bottom = "Cat" (yellow) +1<br>
+      Boss mode: <b>1st boss at 5 score</b>, then every <b>+10 score</b> new boss ⚡<br>
+      Score: <span id="score">0</span> | High Score: <span id="highScore">0</span>
+      <div id="tagline"><b>Stay Brave</b> • <b>Play Smart</b></div>
+    </div>
+
+    <!-- HOW TO PLAY -->
+    <button id="howToBtn">How to play?</button>
+    <div id="howToBox">
+      <ul>
+        <li>Use UP / DOWN (or joystick) to move your hunter.</li>
+        <li>Press SPACE / F (or FIRE button) to shoot a straight red bullet.</li>
+        <li>White top bird (Fish) = 1 point when shot.</li>
+        <li>Green middle bird (Elephant) = 1 point when shot.</li>
+        <li>Yellow bottom bird (Cat) = 1 point when shot.</li>
+        <li>If any bird touches you, you are out (Game Over).</li>
+        <li>Boss mode: first boss comes at score 5, then next boss after +10 score each time.</li>
+        <li>Boss has 5 health. Your bullets reduce its health. At 0, boss dies.</li>
+        <li>Boss bullets are blue. Each hit removes 1 health from you. At 0 health, you are out.</li>
+        <li>You have 5 health bars at the top during boss fight.</li>
+        <li>Press R or tap RESTART to start the game again.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const highScoreEl = document.getElementById("highScore");
+
+    const easyBtn = document.getElementById("easyBtn");
+    const normalBtn = document.getElementById("normalBtn");
+    const hardBtn = document.getElementById("hardBtn");
+
+    const modeNoBossBtn = document.getElementById("modeNoBossBtn");
+    const modeBossBtn = document.getElementById("modeBossBtn");
+
+    const btnFire = document.getElementById("btnFire");
+    const btnRestart = document.getElementById("btnRestart");
+
+    const joystickBase = document.getElementById("joystickBase");
+    const joystickKnob = document.getElementById("joystickKnob");
+
+    const howToBtn = document.getElementById("howToBtn");
+    const howToBox = document.getElementById("howToBox");
+
+    const groundY = 240;
+
+    // ---------- HOW TO PLAY TOGGLE ----------
+    let howToVisible = false;
+    howToBtn.addEventListener("click", () => {
+      howToVisible = !howToVisible;
+      howToBox.style.display = howToVisible ? "block" : "none";
+    });
+
+    // ---------- MODES ----------
+    const MODE = { NO_BOSS: "noboss", BOSS: "boss" };
+    let currentMode = MODE.NO_BOSS;
+
+    // ---------- PLAYER ----------
+    const STAND_HEIGHT = 70;
+    const DUCK_HEIGHT = 45;
+    const UP_Y = 142; // top lane
+
+    const player = {
+      x: 80,
+      y: groundY - STAND_HEIGHT,
+      width: 35,
+      height: STAND_HEIGHT,
+      isUp: false,
+      ducking: false
+    };
+
+    const bullets = [];
+    const enemies = [];
+    const clouds = [];
+
+    // ---------- BOSS ----------
+    let inBossFight = false;
+    let boss = null;
+    let bossBullets = [];
+    let bossFireTimer = 0;
+    const BOSS_HP = 5;
+    const MAX_HEALTH = 5;
+    let playerHealth = MAX_HEALTH;
+    let lightningTimer = 0;
+
+    let savedSpeedForBoss = 0;
+    let nextBossScore = 5; // first boss at 5
+
+    // ---------- NIGHT BG + BG LIGHTNING ----------
+    const bgLightning = [];
+
+    // ---------- DIFFICULTY ----------
+    const difficulties = {
+      easy:   { baseSpeed: 5,   spawnRate: 120, speedIncreaseInterval: 380, speedIncreaseAmount: 0.3 },
+      normal: { baseSpeed: 6.5, spawnRate: 95,  speedIncreaseInterval: 320, speedIncreaseAmount: 0.45 },
+      hard:   { baseSpeed: 8,   spawnRate: 75,  speedIncreaseInterval: 260, speedIncreaseAmount: 0.65 }
+    };
+
+    const bossConfigs = {
+      easy:   { fireInterval: 90,  bulletSpeed: 6 },
+      normal: { fireInterval: 70,  bulletSpeed: 8.5 },
+      hard:   { fireInterval: 55,  bulletSpeed: 11 }
+    };
+
+    let currentDifficultyKey = "normal";
+    let currentDifficulty = difficulties.normal;
+    let gameSpeed = currentDifficulty.baseSpeed;
+    let frameCount = 0;
+    let score = 0;
+    let highScore = 0;
+    let gameOver = false;
+
+    // ---------- SCORE / HIGHSCORE ----------
+    try {
+      const stored = localStorage.getItem("horrorHunterHighScore");
+      if (stored !== null) {
+        const parsed = parseInt(stored);
+        if (!isNaN(parsed)) highScore = parsed;
+      }
+    } catch (e) {}
+    highScoreEl.textContent = highScore;
+
+    function updateScore(points) {
+      score += points;
+      if (score > highScore) {
+        highScore = score;
+        try {
+          localStorage.setItem("horrorHunterHighScore", String(highScore));
+        } catch (e) {}
+      }
+      scoreEl.textContent = score;
+      highScoreEl.textContent = highScore;
+    }
+
+    // ---------- Mode & Difficulty ----------
+    function setDifficulty(level) {
+      currentDifficultyKey = level;
+      currentDifficulty = difficulties[level];
+      resetGame();
+
+      easyBtn.classList.remove("active");
+      normalBtn.classList.remove("active");
+      hardBtn.classList.remove("active");
+      if (level === "easy")   easyBtn.classList.add("active");
+      if (level === "normal") normalBtn.classList.add("active");
+      if (level === "hard")   hardBtn.classList.add("active");
+    }
+
+    easyBtn.addEventListener("click", () => setDifficulty("easy"));
+    normalBtn.addEventListener("click", () => setDifficulty("normal"));
+    hardBtn.addEventListener("click", () => setDifficulty("hard"));
+
+    function setMode(mode) {
+      currentMode = mode;
+
+      modeNoBossBtn.classList.remove("active");
+      modeBossBtn.classList.remove("active");
+      if (mode === MODE.NO_BOSS) modeNoBossBtn.classList.add("active");
+      if (mode === MODE.BOSS)    modeBossBtn.classList.add("active");
+
+      resetGame();
+    }
+
+    modeNoBossBtn.addEventListener("click", () => setMode(MODE.NO_BOSS));
+    modeBossBtn.addEventListener("click", () => setMode(MODE.BOSS));
+
+    // ---------- ENEMIES ----------
+    function spawnEnemy() {
+      const r = Math.random();
+      let type;
+      if (r < 0.33) type = "fish";
+      else if (r < 0.66) type = "rat";
+      else type = "elephant";
+
+      // fixed colours: fish white, elephant green, cat/rat yellow
+      let primary, secondary;
+      if (type === "fish") {
+        primary = "#ffffff";
+        secondary = "#dddddd";
+      } else if (type === "elephant") {
+        primary = "#00aa44";
+        secondary = "#55ff99";
+      } else { // rat/cat
+        primary = "#ffdd00";
+        secondary = "#ffb300";
+      }
+
+      if (type === "fish") {
+        enemies.push({
+          type,
+          x: canvas.width,
+          y: 158,
+          width: 40,
+          height: 28,
+          alive: true,
+          dying: false,
+          dieTimer: 0,
+          hitFlash: 0,
+          hp: 1,
+          primary,
+          secondary
+        });
+      } else if (type === "rat") {
+        const size = 32;
+        enemies.push({
+          type,
+          x: canvas.width,
+          y: groundY - size,
+          width: size,
+          height: size,
+          alive: true,
+          dying: false,
+          dieTimer: 0,
+          hitFlash: 0,
+          hp: 1,
+          primary,
+          secondary
+        });
+      } else {
+        const width = 60;
+        const height = 34;
+        const gunY = (groundY - STAND_HEIGHT) + 30;
+        const eleY = gunY - height / 2;
+        enemies.push({
+          type,
+          x: canvas.width,
+          y: eleY,
+          width,
+          height,
+          alive: true,
+          dying: false,
+          dieTimer: 0,
+          hitFlash: 0,
+          hp: 1,
+          primary,
+          secondary
+        });
+      }
+    }
+
+    // ---------- CLOUDS ----------
+    function spawnCloud() {
+      clouds.push({
+        x: canvas.width + Math.random() * 200,
+        y: 20 + Math.random() * 80,
+        size: 14 + Math.random() * 14,
+        speed: 0.5 + Math.random() * 0.8,
+        variant: Math.floor(Math.random() * 3)
+      });
+    }
+
+    // ---------- BG LIGHTNING ----------
+    function spawnBgLightning() {
+      const x = 50 + Math.random() * (canvas.width - 100);
+      bgLightning.push({ x, timer: 12 });
+    }
+
+    function updateBgLightning() {
+      for (let i = bgLightning.length - 1; i >= 0; i--) {
+        bgLightning[i].timer--;
+        if (bgLightning[i].timer <= 0) bgLightning.splice(i, 1);
+      }
+    }
+
+    function drawBgLightning() {
+      if (bgLightning.length === 0) return;
+
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      for (const bolt of bgLightning) {
+        const startX = bolt.x;
+        let y = 0;
+        let x = startX;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        const segments = 5;
+        const step = (groundY - 40) / segments;
+        for (let i = 0; i < segments; i++) {
+          x += (Math.random() - 0.5) * 40;
+          y += step;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // ---------- BOSS ----------
+    function startBossFight() {
+      if (currentMode !== MODE.BOSS) return;
+
+      inBossFight = true;
+      boss = {
+        x: canvas.width - 140,
+        y: 80,
+        width: 70,
+        height: 70,
+        hp: BOSS_HP,
+        hitFlash: 0,
+        vy: 3
+      };
+      bossBullets = [];
+      bossFireTimer = 0;
+      playerHealth = MAX_HEALTH;
+      lightningTimer = 0;
+
+      savedSpeedForBoss = gameSpeed;
+      gameSpeed = 0;
+
+      player.y = groundY - STAND_HEIGHT;
+      player.isUp = false;
+      player.ducking = false;
+
+      enemies.length = 0;
+      bullets.length = 0;
+    }
+
+    // ---------- RESET ----------
+    function resetGame() {
+      enemies.length = 0;
+      clouds.length = 0;
+      bullets.length = 0;
+      bossBullets.length = 0;
+      bgLightning.length = 0;
+      boss = null;
+      inBossFight = false;
+
+      currentDifficulty = difficulties[currentDifficultyKey];
+      gameSpeed = currentDifficulty.baseSpeed;
+
+      frameCount = 0;
+      score = 0;
+      scoreEl.textContent = score;
+
+      playerHealth = MAX_HEALTH;
+      savedSpeedForBoss = 0;
+      nextBossScore = 5;
+
+      gameOver = false;
+      player.isUp = false;
+      player.ducking = false;
+      player.height = STAND_HEIGHT;
+      player.y = groundY - STAND_HEIGHT;
+
+      for (let i = 0; i < 4; i++) spawnCloud();
+    }
+
+    // ---------- CONTROLS: KEYBOARD ----------
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "ArrowUp") {
+        if (!gameOver) player.isUp = true;
+      }
+
+      if (e.code === "ArrowDown") {
+        if (!gameOver) player.ducking = true;
+      }
+
+      if (e.code === "Space" || e.code === "KeyF") {
+        if (!gameOver) shoot();
+      }
+
+      if (e.code === "KeyR") {
+        resetGame();
+      }
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowUp" && !gameOver) player.isUp = false;
+      if (e.code === "ArrowDown" && !gameOver) player.ducking = false;
+    });
+
+    // ---------- CONTROLS: JOYSTICK (MOBILE/PC) ----------
+    let joyActive = false;
+    let joyCenter = { x: 0, y: 0 };
+
+    function getEventPos(e) {
+      if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else {
+        return { x: e.clientX, y: e.clientY };
+      }
+    }
+
+    function joystickStart(e) {
+      e.preventDefault();
+      const rect = joystickBase.getBoundingClientRect();
+      joyCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+      joyActive = true;
+      joystickMove(e);
+    }
+
+    function joystickMove(e) {
+      if (!joyActive) return;
+      e.preventDefault();
+
+      const pos = getEventPos(e);
+      let dy = pos.y - joyCenter.y;
+      const maxDist = 30;
+      if (dy < -maxDist) dy = -maxDist;
+      if (dy > maxDist) dy = maxDist;
+
+      const threshold = 10;
+
+      if (dy < -threshold) {
+        player.isUp = true;
+        player.ducking = false;
+      } else if (dy > threshold) {
+        player.ducking = true;
+        player.isUp = false;
+      } else {
+        player.isUp = false;
+        player.ducking = false;
+      }
+
+      joystickKnob.style.transform =
+        `translate(calc(-50% + 0px), calc(-50% + ${dy}px))`;
+    }
+
+    function joystickEnd(e) {
+      e.preventDefault();
+      joyActive = false;
+      player.isUp = false;
+      player.ducking = false;
+      joystickKnob.style.transform = "translate(-50%, -50%)";
+    }
+
+    joystickBase.addEventListener("mousedown", joystickStart);
+    document.addEventListener("mousemove", joystickMove);
+    document.addEventListener("mouseup", joystickEnd);
+
+    joystickBase.addEventListener("touchstart", joystickStart, { passive: false });
+    document.addEventListener("touchmove", joystickMove, { passive: false });
+    document.addEventListener("touchend", joystickEnd, { passive: false });
+    document.addEventListener("touchcancel", joystickEnd, { passive: false });
+
+    // ---------- FIRE / RESTART BUTTONS ----------
+    btnFire.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!gameOver) shoot();
+    });
+    btnFire.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (!gameOver) shoot();
+    }, { passive: false });
+
+    btnRestart.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetGame();
+    });
+    btnRestart.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      resetGame();
+    }, { passive: false });
+
+    // ---------- PLAYER MOVE LOGIC ----------
+    function updatePlayer() {
+      if (inBossFight && currentMode === MODE.BOSS) {
+        player.height = STAND_HEIGHT;
+        const speed = 5;
+        if (player.isUp) player.y -= speed;
+        if (player.ducking) player.y += speed;
+
+        const minY = 40;
+        const maxY = groundY - STAND_HEIGHT;
+        if (player.y < minY) player.y = minY;
+        if (player.y > maxY) player.y = maxY;
+      } else {
+        if (player.isUp) {
+          player.height = STAND_HEIGHT;
+          player.y = UP_Y;
+        } else if (player.ducking) {
+          player.height = DUCK_HEIGHT;
+          player.y = groundY - DUCK_HEIGHT;
+        } else {
+          player.height = STAND_HEIGHT;
+          player.y = groundY - STAND_HEIGHT;
+        }
+      }
+    }
+
+    // ---------- SHOOT ----------
+    function shoot() {
+      const gunY = player.y + 30;
+
+      bullets.push({
+        x: player.x + player.width + 5,
+        y: gunY,
+        vx: 11,
+        width: 18,
+        height: 4,
+        life: 50
+      });
+    }
+
+    function updateBullets() {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx;
+        b.life--;
+
+        if (b.x > canvas.width + 50 || b.life <= 0) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        let hitSomething = false;
+
+        for (const en of enemies) {
+          if (!en.alive) continue;
+          if (
+            b.x < en.x + en.width &&
+            b.x + b.width > en.x &&
+            b.y < en.y + en.height &&
+            b.y + b.height > en.y
+          ) {
+            en.hp--;
+            en.hitFlash = 8;
+
+            if (en.hp <= 0) {
+              en.alive = false;
+              en.dying = true;
+              en.dieTimer = 12;
+              updateScore(1);
+            }
+
+            hitSomething = true;
+            break;
+          }
+        }
+
+        if (!hitSomething && currentMode === MODE.BOSS && inBossFight && boss && boss.hp > 0) {
+          if (
+            b.x < boss.x + boss.width &&
+            b.x + b.width > boss.x &&
+            b.y < boss.y + boss.height &&
+            b.y + b.height > boss.y
+          ) {
+            boss.hp--;
+            boss.hitFlash = 8;
+
+            if (boss.hp <= 0) {
+              inBossFight = false;
+              boss = null;
+              bossBullets = [];
+              gameSpeed = savedSpeedForBoss || currentDifficulty.baseSpeed;
+              playerHealth = MAX_HEALTH;
+              nextBossScore = score + 10;
+            }
+            hitSomething = true;
+          }
+        }
+
+        if (hitSomething) bullets.splice(i, 1);
+      }
+    }
+
+    // ---------- ENEMIES UPDATE ----------
+    function updateEnemiesNormal() {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const en = enemies[i];
+        en.x -= gameSpeed;
+
+        if (en.hitFlash > 0) en.hitFlash--;
+
+        if (en.dying) {
+          en.dieTimer--;
+          if (en.dieTimer <= 0) {
+            enemies.splice(i, 1);
+            continue;
+          }
+        } else if (en.x + en.width < 0) {
+          enemies.splice(i, 1);
+          continue;
+        }
+
+        if (en.alive && checkCollision(player, en)) {
+          gameOver = true;
+        }
+      }
+
+      if (!gameOver && frameCount % currentDifficulty.spawnRate === 0) {
+        spawnEnemy();
+      }
+
+      if (!gameOver && currentMode === MODE.BOSS && !inBossFight && score >= nextBossScore) {
+        startBossFight();
+      }
+    }
+
+    // ---------- BOSS MOVE / BULLETS ----------
+    function updateBoss() {
+      if (!boss) return;
+
+      boss.y += boss.vy;
+
+      const minY = 40;
+      const maxY = groundY - boss.height;
+      if (boss.y < minY) {
+        boss.y = minY;
+        boss.vy = Math.abs(boss.vy);
+      }
+      if (boss.y > maxY) {
+        boss.y = maxY;
+        boss.vy = -Math.abs(boss.vy);
+      }
+
+      if (Math.random() < 0.02) {
+        boss.vy *= -1;
+      }
+
+      if (boss.hitFlash > 0) boss.hitFlash--;
+
+      if (lightningTimer <= 0 && Math.random() < 0.02) {
+        lightningTimer = 15;
+      }
+    }
+
+    function updateBossBullets() {
+      if (!inBossFight || !boss) return;
+
+      for (let i = bossBullets.length - 1; i >= 0; i--) {
+        const b = bossBullets[i];
+        b.x += b.vx;
+
+        if (b.x + b.width < 0) {
+          bossBullets.splice(i, 1);
+          continue;
+        }
+
+        if (checkCollision(player, b)) {
+          playerHealth--;
+          bossBullets.splice(i, 1);
+          if (playerHealth <= 0) gameOver = true;
+        }
+      }
+
+      const cfg = bossConfigs[currentDifficultyKey];
+      bossFireTimer--;
+      if (bossFireTimer <= 0 && boss && boss.hp > 0) {
+        const bulletHeight = 10;
+        const bulletWidth = 30;
+
+        const targetCenterY = player.y + player.height / 2;
+        const bulletY = targetCenterY - bulletHeight / 2;
+
+        bossBullets.push({
+          x: boss.x,
+          y: bulletY,
+          vx: -cfg.bulletSpeed,
+          width: bulletWidth,
+          height: bulletHeight
+        });
+
+        bossFireTimer = cfg.fireInterval;
+      }
+    }
+
+    // ---------- CLOUDS UPDATE ----------
+    function updateClouds() {
+      for (let i = clouds.length - 1; i >= 0; i--) {
+        const c = clouds[i];
+        c.x -= c.speed;
+        if (c.x + c.size * 4 < 0) clouds.splice(i, 1);
+      }
+      if (!gameOver && frameCount % 140 === 0 && !(currentMode === MODE.BOSS && inBossFight)) {
+        spawnCloud();
+      }
+    }
+
+    // ---------- COLLISION ----------
+    function checkCollision(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
+
+    // ---------- NIGHT SKY ----------
+    function drawNightSky() {
+      ctx.fillStyle = "#050816";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const gradient = ctx.createRadialGradient(
+        canvas.width / 2, 0, 20,
+        canvas.width / 2, 0, canvas.width
+      );
+      gradient.addColorStop(0, "rgba(80,80,120,0.6)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#f5f5f5";
+      ctx.beginPath();
+      ctx.arc(canvas.width - 70, 55, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      const stars = [
+        [60, 40], [120, 30], [200, 60],
+        [300, 35], [420, 50], [520, 30],
+        [650, 45], [740, 25], [180, 20]
+      ];
+      stars.forEach(([x, y]) => ctx.fillRect(x, y, 2, 2));
+    }
+
+    // ---------- DRAW HELPERS ----------
+    function drawGround() {
+      ctx.strokeStyle = "#555555";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x + 10, groundY + 3);
+        ctx.lineTo(x + 25, groundY + 3);
+        ctx.stroke();
+      }
+    }
+
+    function drawClouds() {
+      ctx.fillStyle = "rgba(200,200,255,0.7)";
+      for (const c of clouds) {
+        const x = c.x;
+        const y = c.y;
+        const r = c.size;
+
+        ctx.beginPath();
+        if (c.variant === 0) {
+          ctx.arc(x - r, y, r, 0, Math.PI * 2);
+          ctx.arc(x, y - r * 0.4, r * 1.2, 0, Math.PI * 2);
+          ctx.arc(x + r, y, r, 0, Math.PI * 2);
+        } else if (c.variant === 1) {
+          ctx.arc(x - r * 1.2, y, r * 0.9, 0, Math.PI * 2);
+          ctx.arc(x, y - r * 0.3, r * 1.3, 0, Math.PI * 2);
+          ctx.arc(x + r * 1.2, y, r * 0.9, 0, Math.PI * 2);
+        } else {
+          ctx.arc(x - r * 0.8, y, r * 0.9, 0, Math.PI * 2);
+          ctx.arc(x + r * 0.2, y - r * 0.4, r * 1.1, 0, Math.PI * 2);
+          ctx.arc(x + r * 1.1, y, r * 0.8, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = "#111";
+      ctx.fillRect(player.x, player.y + 15, player.width, player.height - 15);
+
+      ctx.beginPath();
+      ctx.fillStyle = "#222";
+      ctx.arc(
+        player.x + player.width / 2,
+        player.y + 10,
+        player.width / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.fillStyle = "#ff0000";
+      ctx.fillRect(player.x + 6, player.y + 4, 4, 4);
+      ctx.fillRect(player.x + player.width - 10, player.y + 4, 4, 4);
+
+      ctx.fillStyle = "#cccccc";
+      const gunY = player.y + 30;
+      ctx.fillRect(player.x + player.width - 2, gunY, 25, 6);
+      ctx.fillRect(player.x + player.width - 8, gunY + 6, 8, 10);
+    }
+
+    function drawBirdEnemy(en, bodyColor, accentColor) {
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(
+        en.x + en.width / 2,
+        en.y + en.height / 2,
+        en.width / 2,
+        en.height / 2,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.fillStyle = "#ffcc00";
+      ctx.beginPath();
+      ctx.moveTo(en.x + en.width, en.y + en.height / 2);
+      ctx.lineTo(en.x + en.width + 8, en.y + en.height / 2 - 4);
+      ctx.lineTo(en.x + en.width + 8, en.y + en.height / 2 + 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.ellipse(
+        en.x + en.width / 3,
+        en.y + en.height / 2,
+        en.width / 4,
+        en.height / 3,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(en.x + en.width * 0.75, en.y + en.height * 0.3, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawEnemies() {
+      for (const en of enemies) {
+        let bodyColor = en.primary || "#ffffff";
+        let accentColor = en.secondary || bodyColor;
+        if (en.dying || en.hitFlash > 0) bodyColor = "#ff0000";
+        drawBirdEnemy(en, bodyColor, accentColor);
+      }
+    }
+
+    function drawBoss() {
+      if (!boss) return;
+
+      const cx = boss.x + boss.width / 2;
+      const cy = boss.y + boss.height / 2;
+      const r = boss.height / 2;
+
+      let faceColor = "#8844ff";
+      if (boss.hitFlash > 0) faceColor = "#ff0000";
+
+      ctx.fillStyle = faceColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#00ffff";
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.4, cy - r * 0.2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + r * 0.4, cy - r * 0.2, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + r * 0.2, r * 0.5, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy + r * 0.35);
+      ctx.lineTo(cx - 4, cy + r * 0.2);
+      ctx.lineTo(cx - 2, cy + r * 0.35);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx + 6, cy + r * 0.35);
+      ctx.lineTo(cx + 4, cy + r * 0.2);
+      ctx.lineTo(cx + 2, cy + r * 0.35);
+      ctx.fill();
+
+      ctx.fillStyle = "#333";
+      ctx.fillRect(boss.x, boss.y - 12, boss.width, 6);
+      const hpRatio = Math.max(0, boss.hp) / BOSS_HP;
+      ctx.fillStyle = "#00ff00";
+      ctx.fillRect(boss.x, boss.y - 12, boss.width * hpRatio, 6);
+    }
+
+    function drawLightningOverlay() {
+      if (!(currentMode === MODE.BOSS && inBossFight)) return;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (lightningTimer > 0) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const startX = 100 + Math.random() * 200;
+        ctx.moveTo(startX, 0);
+        ctx.lineTo(startX + 20, 40);
+        ctx.lineTo(startX - 10, 80);
+        ctx.lineTo(startX + 25, 130);
+        ctx.stroke();
+
+        lightningTimer--;
+      }
+    }
+
+    function drawBullets() {
+      for (const b of bullets) {
+        ctx.fillStyle = "#ff0000";
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+
+        ctx.fillStyle = "rgba(255, 100, 100, 0.4)";
+        ctx.fillRect(b.x - 2, b.y - 2, b.width + 4, b.height + 4);
+      }
+
+      for (const b of bossBullets) {
+        ctx.fillStyle = "#00aaff";
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+        ctx.fillStyle = "rgba(100, 200, 255, 0.4)";
+        ctx.fillRect(b.x - 2, b.y - 2, b.width + 4, b.height + 4);
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "18px sans-serif";
+      ctx.fillText("Score: " + score, 10, 25);
+      ctx.fillText("High: " + highScore, canvas.width - 130, 25);
+    }
+
+    function drawHealth() {
+      const startX = canvas.width / 2 - 60;
+      const y = 10;
+      for (let i = 0; i < MAX_HEALTH; i++) {
+        ctx.fillStyle = i < playerHealth ? "#00ff55" : "#550000";
+        ctx.fillRect(startX + i * 25, y, 20, 10);
+      }
+    }
+
+    function drawDuck(centerX, centerY) {
+      ctx.fillStyle = "#ffdd33";
+      ctx.beginPath();
+      ctx.arc(centerX - 10, centerY, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(centerX + 15, centerY - 18, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff8800";
+      ctx.beginPath();
+      ctx.ellipse(centerX + 30, centerY - 18, 12, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(centerX + 10, centerY - 22, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(centerX - 18, centerY + 24, 8, 6);
+      ctx.fillRect(centerX - 2, centerY + 24, 8, 6);
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2 - 10;
+
+      ctx.textAlign = "center";
+      ctx.font = "32px sans-serif";
+      ctx.fillStyle = "#ff0000";
+      ctx.fillText("GAME OVER", cx, cy - 60);
+
+      drawDuck(cx, cy);
+
+      ctx.font = "14px sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("Press R or RESTART", cx, cy + 60);
+      ctx.textAlign = "left";
+    }
+
+    // ---------- MAIN LOOP ----------
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawNightSky();
+
+      if (Math.random() < 0.003 && !inBossFight && !gameOver) {
+        spawnBgLightning();
+      }
+      updateBgLightning();
+      drawBgLightning();
+
+      if (!gameOver) {
+        frameCount++;
+
+        if (!inBossFight && frameCount % currentDifficulty.speedIncreaseInterval === 0) {
+          gameSpeed += currentDifficulty.speedIncreaseAmount;
+        }
+
+        updatePlayer();
+        updateClouds();
+
+        if (currentMode === MODE.BOSS) {
+          if (!inBossFight) {
+            updateEnemiesNormal();
+          } else {
+            updateBoss();
+            updateBossBullets();
+          }
+        } else {
+          updateEnemiesNormal();
+        }
+
+        updateBullets();
+
+        drawClouds();
+        drawGround();
+        if (currentMode === MODE.BOSS && inBossFight) drawLightningOverlay();
+        drawPlayer();
+        drawEnemies();
+        if (currentMode === MODE.BOSS && inBossFight && boss && boss.hp > 0) drawBoss();
+        drawBullets();
+        drawScore();
+        if (currentMode === MODE.BOSS && inBossFight) drawHealth();
+      } else {
+        drawClouds();
+        drawGround();
+        if (currentMode === MODE.BOSS && inBossFight) drawLightningOverlay();
+        drawPlayer();
+        drawEnemies();
+        drawBullets();
+        drawScore();
+        if (currentMode === MODE.BOSS && inBossFight) drawHealth();
+        drawGameOver();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    resetGame();
+    animate();
+  </script>
+</body>
+</html>
